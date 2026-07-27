@@ -1,0 +1,79 @@
+# ===== eNSP 验证命令清单 =====
+# 逐台设备执行以下命令，确认配置生效
+
+# ============================================
+# 1. R1 出口路由器 验证
+# ============================================
+display ip interface brief          # 查看接口状态
+display ospf peer brief             # OSPF 邻居应为 Full
+display bgp peer                    # BGP 邻居应为 Established
+display ip routing-table            # 查看完整路由表
+display ip routing-table protocol ospf   # 只查看 OSPF 学到的路由
+display nat session all             # NAT 会话（有流量时）
+display acl 2000                    # ACL 规则
+
+# ============================================
+# 2. ISP-1 验证
+# ============================================
+display ip interface brief
+display bgp peer                    # 与 R1 应为 Established
+ping 172.16.1.2                     # ping R1 直连
+
+# ============================================
+# 3. ISP-2 验证
+# ============================================
+display ip interface brief
+display bgp peer
+ping 172.16.2.2
+
+# ============================================
+# 4. Core-SW 核心交换机 验证
+# ============================================
+display vlan                        # 查看 VLAN 10/20/30/100
+display ip interface brief          # 接口 + VLANIF 状态
+display ospf peer brief             # 与 R1 应为 Full
+display ip routing-table protocol ospf
+display port vlan                   # 端口 VLAN 归属
+display trunkmembership             # Trunk 口成员
+
+# ============================================
+# 5. Agg-SW-1 汇聚交换机 验证
+# ============================================
+display vlan
+display port vlan
+display trunkmembership
+display ip interface brief
+
+# ============================================
+# 6. Agg-SW-2 汇聚交换机 验证
+# ============================================
+display vlan
+display port vlan
+display trunkmembership
+display ip interface brief
+
+# ============================================
+# 7. 接入交换机 验证
+# ============================================
+display vlan                        # 各台确认 VLAN 归属
+display port vlan
+
+# ============================================
+# 8. PC 间连通性测试（在 PC 命令行）
+# ============================================
+# PC1 (192.168.10.1) — 办公区
+ping 192.168.10.254                 # 网关 ✅
+ping 192.168.100.1                  # 跨VLAN→服务器 ✅
+ping 192.168.20.1                   # 办公→访客 ✅
+ping 8.8.8.8                        # 外网 ✅ (NAT)
+tracert 8.8.8.8                     # 查看路径
+
+# PC3 (192.168.20.1) — 访客区
+ping 192.168.20.254                 # 网关 ✅
+ping 192.168.100.1                  # 访客→服务器 ❌ (ACL/NAT限制)
+ping 8.8.8.8                        # 访客→外网 ❌ (ACL拒绝)
+
+# PC4 (192.168.100.1) — 服务器区
+ping 192.168.100.254                # 网关 ✅
+ping 192.168.10.1                   # 服务器→办公 ✅
+ping 8.8.8.8                        # 外网 ✅ (NAT)
